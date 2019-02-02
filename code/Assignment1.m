@@ -17,6 +17,7 @@
 % --------------------------------------------
 clear all; clc;
 
+global mn, global k, global T;
 m0 = 9.11e-31;
 mn = 0.26*m0;
 dim_x = 200e-9;
@@ -37,7 +38,7 @@ Vth = sqrt(2*k*T/mn);
 % the mean free path?
 %
 % Mean free path = Tmn * Vth
-
+global Tmn;
 Tmn = 0.2e-12;
 Mfp = Tmn * Vth;
 
@@ -53,6 +54,7 @@ num_e = 10; % number of electrons
 [vx_vec, vy_vec] = initVelocity(num_e, Vth);
 
 % initialize time variables
+global t_step, global t_final;
 t = 0;
 steps = 100;
 t_step = max(dim_x, dim_y)/(50*Vth);
@@ -137,15 +139,101 @@ pause(0.1)
 %
 % ------------------------------------------------------------------------
 
+% Initialize new x and y positions
+[x_vec, y_vec] = initPosition(num_e, dim_x, dim_y);
 
+% Initialize new vx and vy velocities in a Maxwell-Boltzmann distribution
+[vx_vec, vy_vec] = initBoltDist(num_e);
 
+figure(1);
+title('Electron Velocity Maxwell-Boltzmann Distribution');
+xlabel('Velocity (m/s)');
+ylabel('Frequency');
+hist(sqrt(vx_vec.^2 + vy_vec.^2), 100);
 
+V_avg = mean(sqrt(vx_vec.^2 + vy_vec.^2));
+Vth = sqrt(2*k*T/mn);
 
 % Question 2: Model scattering of electrons using exponential scattering
 % probability: P = 1 - exp(-dt/Tmn) where dt is the time since last time
 % step. Uf P > rand() then the particle scatters. When the electron
 % scatters, re-thermalize its velocities and assign new velocities Vx and
 % Vy from the Maxwell-Boltzmann distributions.
+
+P_scatter = 1 - exp(-t_step/Tmn);
+
+t = 0;
+
+colour = hsv(num_e);
+
+while t < t_final
+    
+    % Calculate new velocity if electron scatters
+    for i=1:length(x_vec)
+        if P_scatter > rand()
+            [vx_vec(i), vy_vec(i)] = newBoltDist();
+        end
+    end
+    
+    % Save previous positions
+    x_vec_prev = x_vec;
+    y_vec_prev = y_vec;
+    
+    % Calculate new position
+    x_vec = x_vec + vx_vec*t_step;
+    y_vec = y_vec + vy_vec*t_step;
+    
+    % Boundary conditions
+    for i=1:num_e
+        if x_vec(i) < 0 % left boundary, periodic
+            x_vec(i) = x_vec(i)+dim_x;
+            x_vec_prev(i) = dim_x;
+        end
+        if x_vec(i) > dim_x % right boundary, periodic
+            x_vec(i) = x_vec(i)-dim_x;
+            x_vec_prev(i) = 0;
+        end
+        if y_vec(i) > dim_y % top boundary, reflect
+            vy_vec(i) = -vy_vec(i);
+            y_vec(i) = 2*dim_y - y_vec(i);
+        end
+        if y_vec(i) < 0 % bottom boundary, reflect
+            vy_vec(i) = -vy_vec(i);
+            y_vec(i) = abs(y_vec(i));
+        end
+    end
+    
+    % Plot trajectories
+    xlabel('x (m)')
+    ylabel('y (m)')
+    title('Particle Trajectories')
+    xlim([0 dim_x])
+    ylim([0 dim_y])
+    pause(0.1)
+    
+    for i=1:num_e
+        plot([x_vec_prev(i);x_vec(i)],[y_vec_prev(i);y_vec(i)],'color',colour(i,:))
+        hold on
+    end
+    
+    t=t+t_step
+end
+
+% ------------------------------------------------------------------------
+%
+% Part 3: Enhancements
+%
+% Question 1: Add an inner rectangle "bottle neck" boundary.
+%
+% ------------------------------------------------------------------------
+
+% Define box limits
+
+% Initialize x and y positions of electrons
+
+% Initialize x and y velocities
+
+% Get electrons that are outside of box limits
 
 
 
